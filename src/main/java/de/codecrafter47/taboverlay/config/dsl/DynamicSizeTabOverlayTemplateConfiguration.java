@@ -18,6 +18,7 @@
 package de.codecrafter47.taboverlay.config.dsl;
 
 import de.codecrafter47.taboverlay.config.dsl.util.ConfigValidationUtil;
+import de.codecrafter47.taboverlay.config.dsl.yaml.MarkedListProperty;
 import de.codecrafter47.taboverlay.config.dsl.yaml.MarkedStringProperty;
 import de.codecrafter47.taboverlay.config.placeholder.PlayerPlaceholderResolver;
 import de.codecrafter47.taboverlay.config.template.DynamicSizeTabOverlayTemplate;
@@ -32,6 +33,10 @@ import lombok.Setter;
 public class DynamicSizeTabOverlayTemplateConfiguration extends AbstractTabOverlayTemplateConfiguration<DynamicSizeTabOverlayTemplate> {
 
     private PlayerOrderConfiguration playerOrder = PlayerOrderConfiguration.DEFAULT;
+
+    private MarkedListProperty<PlayerOrdersConfiguration> playerOrders = null;
+
+    public static MarkedListProperty<PlayerOrdersConfiguration> staticPlayerOrdersXD = null;
 
     private MarkedStringProperty playerSet;
 
@@ -57,6 +62,15 @@ public class DynamicSizeTabOverlayTemplateConfiguration extends AbstractTabOverl
         if (ConfigValidationUtil.checkNotNull(tcc, "DYNAMIC_SIZE tab overlay", "playerOrder", playerOrder, null)) {
             template.setPlayerOrder(playerOrder.toTemplate(tcc));
         }
+
+        if (playerOrders != null) {
+            playerOrders.forEach(po -> {
+                po.compileCondition(tcc);
+                po.compileTemplate(tcc);
+            });
+            staticPlayerOrdersXD = playerOrders;
+        }
+
         if (ConfigValidationUtil.checkNotNull(tcc, "DYNAMIC_SIZE tab overlay", "playerComponent", playerComponent, null)) {
             TemplateCreationContext childContext = tcc.clone();
             childContext.setDefaultIcon(new PlayerIconTemplate(PlayerPlaceholderResolver.BindPoint.PLAYER, tcc.getPlayerIconDataKey()));

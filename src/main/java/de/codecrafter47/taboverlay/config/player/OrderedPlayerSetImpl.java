@@ -20,6 +20,7 @@ package de.codecrafter47.taboverlay.config.player;
 import de.codecrafter47.data.api.DataHolder;
 import de.codecrafter47.data.api.DataKey;
 import de.codecrafter47.taboverlay.config.context.Context;
+import de.codecrafter47.taboverlay.config.dsl.DynamicSizeTabOverlayTemplateConfiguration;
 import de.codecrafter47.taboverlay.config.template.PlayerOrderTemplate;
 import lombok.val;
 
@@ -27,6 +28,7 @@ import java.text.Collator;
 import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -57,7 +59,10 @@ public class OrderedPlayerSetImpl implements OrderedPlayerSet {
         this.logger = logger;
         this.context = context;
         this.dependentDataKeys = new ArrayList<>();
+        this.comparator = createComparator(playerOrderTemplate);
+    }
 
+    private Comparator<Player> createComparator(PlayerOrderTemplate playerOrderTemplate) {
         Comparator<Player> chain = null;
         for (PlayerOrderTemplate.Entry entry : playerOrderTemplate.getEntries()) {
             Comparator<Player> comparator = null;
@@ -102,7 +107,7 @@ public class OrderedPlayerSetImpl implements OrderedPlayerSet {
         if (chain == null) {
             chain = Comparator.comparingInt(player -> 0);
         }
-        this.comparator = chain;
+        return chain;
     }
 
     private void registerListeners(Player player) {
@@ -128,6 +133,19 @@ public class OrderedPlayerSetImpl implements OrderedPlayerSet {
             containedPlayers.add(player);
         }
         containedPlayers.sort(comparator);
+        if (DynamicSizeTabOverlayTemplateConfiguration.staticPlayerOrdersXD != null) {
+            AtomicBoolean sorted = new AtomicBoolean();
+            DynamicSizeTabOverlayTemplateConfiguration.staticPlayerOrdersXD.forEach(po -> {
+                if (!sorted.get() && po.matches(context)) {
+                    sorted.set(true);
+                    System.out.println("Matched: " + po.condition);
+                    System.out.println("Using playerOrder: " + po.playerOrder);
+                    containedPlayers.sort(createComparator(po.getCompiledPlayerOrder()));
+                    System.out.println("Current for " + context.getViewer().getName() + " @ " + viewer.getServerName() + ":");
+                    containedPlayers.forEach(player -> System.out.println(player.getName()));
+                }
+            });
+        }
 
         active = true;
     }
