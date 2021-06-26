@@ -41,9 +41,4 @@ public interface Player extends DataHolder {
      */
     @Nonnull
     UUID getUniqueID();
-
-    @javax.annotation.Nullable
-    default String getServerName() {
-        return null;
-    }
 }

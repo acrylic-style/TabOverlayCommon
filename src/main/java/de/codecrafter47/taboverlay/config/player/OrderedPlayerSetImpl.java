@@ -28,7 +28,7 @@ import java.text.Collator;
 import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -110,6 +110,18 @@ public class OrderedPlayerSetImpl implements OrderedPlayerSet {
         return chain;
     }
 
+    private Comparator<Player> getComparator() {
+        AtomicReference<Comparator<Player>> ref = new AtomicReference<>();
+        if (DynamicSizeTabOverlayTemplateConfiguration.staticPlayerOrdersXD != null) {
+            DynamicSizeTabOverlayTemplateConfiguration.staticPlayerOrdersXD.forEach(po -> {
+                if (ref.get() == null && po.matches(context)) {
+                    ref.set(createComparator(po.getCompiledPlayerOrder()));
+                }
+            });
+        }
+        return ref.get() != null ? ref.get() : this.comparator;
+    }
+
     private void registerListeners(Player player) {
         for (DataKey<?> dataKey : dependentDataKeys) {
             player.addDataChangeListener(dataKey, listener);
@@ -132,20 +144,7 @@ public class OrderedPlayerSetImpl implements OrderedPlayerSet {
             registerListeners(player);
             containedPlayers.add(player);
         }
-        containedPlayers.sort(comparator);
-        if (DynamicSizeTabOverlayTemplateConfiguration.staticPlayerOrdersXD != null) {
-            AtomicBoolean sorted = new AtomicBoolean();
-            DynamicSizeTabOverlayTemplateConfiguration.staticPlayerOrdersXD.forEach(po -> {
-                if (!sorted.get() && po.matches(context)) {
-                    sorted.set(true);
-                    System.out.println("Matched: " + po.condition);
-                    System.out.println("Using playerOrder: " + po.playerOrder);
-                    containedPlayers.sort(createComparator(po.getCompiledPlayerOrder()));
-                    System.out.println("Current for " + context.getViewer().getName() + " @ " + viewer.getServerName() + ":");
-                    containedPlayers.forEach(player -> System.out.println(player.getName()));
-                }
-            });
-        }
+        containedPlayers.sort(getComparator());
 
         active = true;
     }
@@ -177,7 +176,7 @@ public class OrderedPlayerSetImpl implements OrderedPlayerSet {
 
     private void update() {
         containedPlayers.addAll(pendingPlayers);
-        containedPlayers.sort(comparator);
+        containedPlayers.sort(getComparator());
         notifyListenersOfUpdate(!pendingPlayers.isEmpty());
         pendingPlayers.clear();
     }
